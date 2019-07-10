@@ -188,7 +188,7 @@ public class RoleCouplingProcessor {
             System.out.println("role_id1\trole_id2\tfraction\tcount");
             List<PairCounter<Role>.Count> goodPairs = this.coupler.getPairCounts(this.togetherness, this.minCount);
             for (PairCounter<Role>.Count goodPair : goodPairs) {
-                System.out.format("%s\t%s\t%4.2lg\t%d%n", goodPair.getKey1().getId(), goodPair.getKey2().getId(),
+                System.out.format("%s\t%s\t%4.2g\t%d%n", goodPair.getKey1().getId(), goodPair.getKey2().getId(),
                         goodPair.togetherness(), goodPair.getCount());
             }
         } catch (IOException e) {
