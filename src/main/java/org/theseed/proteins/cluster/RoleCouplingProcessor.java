@@ -31,6 +31,10 @@ import org.theseed.proteins.RoleMap;
  * 				if the coupler file exists it will be loaded before the new genome
  * 				directory is processed
  *
+ * --compare	compare the coupling results to the coupler in a specified file;
+ * 				for every coupling in our results file that exceeds the threshold,
+ * 				we want to insure it exceeds the threshold in the specified file
+ *
  * If "--create" is specified, the following options are required; otherwise they
  * are ignored.
  *
@@ -38,6 +42,13 @@ import org.theseed.proteins.RoleMap;
  * 				neighbors (default 500)
  * -R			name of a file containing the useful roles; the file is tab-delimited,
  * 				each record containing a role ID and a role name
+ *
+ * If "--compare" is specified, the following options are also used.
+ *
+ * -n			minimum number of role occurrences for a pair to be considered in
+ * 				error (default 20)
+ * -u			minimum togetherness threshold for two features to be considered
+ * 				coupled in the comparison (default 0.70)
  *
  * The positional parameters are the name of the coupler file and the name of a
  * directory containing the genomes to process.  If "--create" is specified, the
@@ -81,14 +92,28 @@ public class RoleCouplingProcessor {
             usage="minimum fraction of times coupled features found together")
     private double togetherness;
 
+    /** minimum togetherness threshold for comparison table */
+    @Option(name="-u", aliases={"--compareScore", "--compareStrength"}, metaVar="0.70",
+            usage="minimum fraction of times coupled features found together in comparison")
+    private double otherTogetherness;
+
     /** minimum number of occurrences for output report */
     @Option(name="-m", aliases={"--minCount", "--minFreq"}, metaVar="10",
             usage="minimum number of times coupled features found together")
     private int minCount;
 
+    /** minimum number of occurrences for output report */
+    @Option(name="-n", aliases={"--compareCount", "--comareFreq"}, metaVar="20",
+            usage="minimum number of times coupled features found for valid comparison")
+    private int otherCount;
+
     /** creation / reuse flag */
     @Option(name="--create", usage="create new coupler file")
     private boolean createMode;
+
+    /** compare option */
+    @Option(name="--compare", usage="compare results to another coupler file")
+    private File compareFile;
 
     /** coupler file */
     @Argument(index=0, metaVar="coupler.ser", usage="name of coupler file",
@@ -113,8 +138,11 @@ public class RoleCouplingProcessor {
         this.gap = 500;
         this.debug = false;
         this.roleFile = null;
+        this.compareFile = null;
         this.togetherness = 0.80;
         this.minCount = 10;
+        this.otherCount = 20;
+        this.otherTogetherness = 0.70;
         this.createMode = false;
         this.genomeDirs = new ArrayList<File>();
         // Parse the command line.
@@ -143,6 +171,10 @@ public class RoleCouplingProcessor {
                     if (! genomeDir.isDirectory()) {
                         throw new FileNotFoundException(genomeDir.getPath() + " is not a valid directory.");
                     }
+                }
+                // Insure the compare file exists.
+                if (this.compareFile != null && ! this.compareFile.exists()) {
+                    throw new FileNotFoundException(this.compareFile.getPath() + " is not found.");
                 }
                 // We made it this far, we can run the application.
                 retVal = true;
@@ -183,14 +215,57 @@ public class RoleCouplingProcessor {
             // Save the coupling data.
             if (debug) System.err.println("Saving coupling data to " + this.couplerFile.getPath() + ".");
             this.coupler.save(this.couplerFile);
+            // If we have a comparison file, read it in here.  Note we will also track the number of
+            // compare failures.
+            int failureCount = 0;
+            int totalCount = 0;
+            RoleCoupleCounter comparator = null;
+            if (this.compareFile != null) {
+                if (debug) System.err.println("Loading comparator from " + this.compareFile + ".");
+                comparator = RoleCoupleCounter.load(this.compareFile);
+            }
             // Write the data that meets the thresholds.
             if (debug) System.err.println("Writing output.");
-            System.out.println("role_id1\trole_id2\tfraction\tcount");
+            // Compute the headers based on whether or not there is a comparison.
+            if (comparator != null) {
+                System.out.println("role_id1\trole_id2\tfraction\tcount\totherFrac\totherCount\totherFound\tfailure");
+            } else {
+                System.out.println("role_id1\trole_id2\tfraction\tcount");
+            }
             List<PairCounter<Role>.Count> goodPairs = this.coupler.getPairCounts(this.togetherness, this.minCount);
             for (PairCounter<Role>.Count goodPair : goodPairs) {
-                System.out.format("%s\t%s\t%4.2g\t%d%n", goodPair.getKey1().getId(), goodPair.getKey2().getId(),
+                System.out.format("%s\t%s\t%4.2g\t%d", goodPair.getKey1().getId(), goodPair.getKey2().getId(),
                         goodPair.togetherness(), goodPair.getCount());
+                totalCount++;
+                if (comparator == null) {
+                    // No comparison.  End the line.
+                    System.out.println();
+                } else {
+                    // Comparison required.  Get the count.  Note we ignore the result if neither
+                    // role appeared in the sample.
+                    int otherPairCount = comparator.getCount(goodPair.getKey1(), goodPair.getKey2());
+                    int appearances = comparator.getCount(goodPair.getKey1()) +
+                            comparator.getCount(goodPair.getKey2());
+                    if (appearances > 0) {
+                        double otherFrac = comparator.getTogetherness(goodPair.getKey1(), goodPair.getKey2());
+                        int otherRoleCount = appearances - otherPairCount;
+                        String errorFlag = "";
+                        if (otherFrac < this.otherTogetherness && appearances >= this.otherCount) {
+                            errorFlag = "Y";
+                            failureCount++;
+                        }
+                        System.out.format("\t%4.2g\t%d\t%d\t%s%n", otherFrac, otherPairCount, otherRoleCount,
+                                errorFlag);
+                    } else {
+                        System.out.println();
+                    }
+
+                }
             }
+            if (debug && comparator != null) {
+                System.err.println("Failure count for comparison is " + failureCount + ".");
+            }
+            if (debug) System.err.println(totalCount + " couplings found.");
         } catch (IOException e) {
             // Percolate the error.
             System.err.println("Error processing command: " + e.getMessage());
