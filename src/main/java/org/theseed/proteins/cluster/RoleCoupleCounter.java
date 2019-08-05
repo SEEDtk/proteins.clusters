@@ -14,10 +14,10 @@ import java.util.regex.Pattern;
 
 import org.theseed.counters.CountMap;
 import org.theseed.counters.PairCounter;
-import org.theseed.genomes.Contig;
-import org.theseed.genomes.Feature;
-import org.theseed.genomes.FeatureList;
-import org.theseed.genomes.Genome;
+import org.theseed.genome.Contig;
+import org.theseed.genome.Feature;
+import org.theseed.genome.FeatureList;
+import org.theseed.genome.Genome;
 import org.theseed.proteins.Role;
 import org.theseed.proteins.RoleMap;
 

@@ -11,8 +11,8 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.theseed.counters.PairCounter;
-import org.theseed.genomes.Genome;
-import org.theseed.genomes.GenomeDirectory;
+import org.theseed.genome.Genome;
+import org.theseed.genome.GenomeDirectory;
 import org.theseed.proteins.Role;
 import org.theseed.proteins.RoleMap;
 
