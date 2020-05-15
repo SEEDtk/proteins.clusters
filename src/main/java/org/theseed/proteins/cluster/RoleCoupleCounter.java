@@ -199,7 +199,7 @@ public class RoleCoupleCounter {
      * @return the role object for the role with the specified ID, or NULL if it does not exist
      */
     public Role getRole(String roleId) {
-        return this.usefulRoles.get(roleId);
+        return this.usefulRoles.getItem(roleId);
     }
 
     /**
@@ -216,7 +216,7 @@ public class RoleCoupleCounter {
         PrintWriter writer = new PrintWriter(outFile);
         writer.format("%d\tRole-Coupling Database%n", this.gap);
         writer.println("count\trole_id\trole_name%n");
-        Collection<Role> roles = this.usefulRoles.values();
+        Collection<Role> roles = this.usefulRoles.objectValues();
         for (Role role : roles) {
             writer.format("%d\t%s\t%s%n", this.getCount(role), role.getId(), role.getName());
         }
