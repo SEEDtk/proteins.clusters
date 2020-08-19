@@ -1,7 +1,5 @@
 package org.theseed.proteins.cluster;
 
-import org.theseed.proteins.cluster.RoleCouplingProcessor;
-
 /**
  * Process genomes to find functionally-coupled roles.
  *
